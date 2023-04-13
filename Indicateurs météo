@@ -1,0 +1,33 @@
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+link = "https://raw.githubusercontent.com/murpi/wilddata/master/quests/weather2019.csv"
+df_weather = pd.read_csv(link)
+df_weather['DATE'] = pd.to_datetime(df_weather['DATE'])
+
+# Ajouter une colonne pour le mois de chaque date
+df_weather['MONTH'] = df_weather['DATE'].dt.month_name()
+
+# Créer une figure avec quatre sous-graphiques
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(15,7))
+axes = axes.flatten()
+
+# Créer quatre graphiques avec des indicateurs pertinents sur le climat
+sns.barplot(x="MONTH", y="SUNHOUR", palette = "blend:orange,yellow,orange", data=df_weather, ax=axes[0])
+sns.boxplot(x="MONTH", y="MAX_TEMPERATURE_C", data=df_weather, ax=axes[1])
+sns.barplot(x="MONTH", y="HUMIDITY_MAX_PERCENT", palette = "blend:blue,lightblue,blue",  data=df_weather, ax=axes[2])
+sns.lineplot(x="MONTH", y="WINDSPEED_MAX_KMH", data=df_weather, ax=axes[3])
+
+# Définir des titres pour chaque sous-graphique
+ax1=axes[0].set_title("Temps d'ensoleillement moyen par mois")
+axes[1].set_title("Température maximale journalière par mois")
+axes[2].set_title("Taux d'humidité dans l'air par mois")
+axes[3].set_title("Vitesse du vent maximale par mois")
+
+# Ajouter un titre global à la figure
+fig.suptitle("Quel mois a le meilleur temps ?")
+
+# Afficher le graphique
+plt.show()
