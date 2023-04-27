@@ -1,0 +1,172 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyOKLmDpR6w5QfiGuBrP/jLJ",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/VincentM1978/Module/blob/main/Premier_essai_streamlit.py.\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# un script python pour streamlit qui utilise rembg pour retirer l'arrière plan d'une image"
+      ],
+      "metadata": {
+        "id": "0T5lm0_M57m6"
+      },
+      "execution_count": 1,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!pip install rembg"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "2NIwizU6D-0t",
+        "outputId": "07fc51e5-939c-4a0b-d134-facfb16935ff"
+      },
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/\n",
+            "Requirement already satisfied: rembg in /usr/local/lib/python3.9/dist-packages (2.0.34)\n",
+            "Requirement already satisfied: pillow>=9.3.0 in /usr/local/lib/python3.9/dist-packages (from rembg) (9.5.0)\n",
+            "Requirement already satisfied: fastapi>=0.92.0 in /usr/local/lib/python3.9/dist-packages (from rembg) (0.95.1)\n",
+            "Requirement already satisfied: onnxruntime>=1.14.1 in /usr/local/lib/python3.9/dist-packages (from rembg) (1.14.1)\n",
+            "Requirement already satisfied: pooch>=1.6.0 in /usr/local/lib/python3.9/dist-packages (from rembg) (1.6.0)\n",
+            "Requirement already satisfied: pymatting>=1.1.8 in /usr/local/lib/python3.9/dist-packages (from rembg) (1.1.8)\n",
+            "Requirement already satisfied: scipy>=1.9.3 in /usr/local/lib/python3.9/dist-packages (from rembg) (1.10.1)\n",
+            "Requirement already satisfied: uvicorn>=0.20.0 in /usr/local/lib/python3.9/dist-packages (from rembg) (0.21.1)\n",
+            "Requirement already satisfied: tqdm>=4.64.1 in /usr/local/lib/python3.9/dist-packages (from rembg) (4.65.0)\n",
+            "Requirement already satisfied: python-multipart>=0.0.5 in /usr/local/lib/python3.9/dist-packages (from rembg) (0.0.6)\n",
+            "Requirement already satisfied: asyncer>=0.0.2 in /usr/local/lib/python3.9/dist-packages (from rembg) (0.0.2)\n",
+            "Requirement already satisfied: imagehash>=4.3.1 in /usr/local/lib/python3.9/dist-packages (from rembg) (4.3.1)\n",
+            "Requirement already satisfied: watchdog>=2.1.9 in /usr/local/lib/python3.9/dist-packages (from rembg) (3.0.0)\n",
+            "Requirement already satisfied: click>=8.1.3 in /usr/local/lib/python3.9/dist-packages (from rembg) (8.1.3)\n",
+            "Requirement already satisfied: scikit-image>=0.19.3 in /usr/local/lib/python3.9/dist-packages (from rembg) (0.19.3)\n",
+            "Requirement already satisfied: numpy>=1.23.5 in /usr/local/lib/python3.9/dist-packages (from rembg) (1.23.5)\n",
+            "Requirement already satisfied: filetype>=1.2.0 in /usr/local/lib/python3.9/dist-packages (from rembg) (1.2.0)\n",
+            "Requirement already satisfied: opencv-python-headless>=4.6.0.66 in /usr/local/lib/python3.9/dist-packages (from rembg) (4.7.0.72)\n",
+            "Requirement already satisfied: aiohttp>=3.8.1 in /usr/local/lib/python3.9/dist-packages (from rembg) (3.8.4)\n",
+            "Requirement already satisfied: async-timeout<5.0,>=4.0.0a3 in /usr/local/lib/python3.9/dist-packages (from aiohttp>=3.8.1->rembg) (4.0.2)\n",
+            "Requirement already satisfied: aiosignal>=1.1.2 in /usr/local/lib/python3.9/dist-packages (from aiohttp>=3.8.1->rembg) (1.3.1)\n",
+            "Requirement already satisfied: attrs>=17.3.0 in /usr/local/lib/python3.9/dist-packages (from aiohttp>=3.8.1->rembg) (23.1.0)\n",
+            "Requirement already satisfied: yarl<2.0,>=1.0 in /usr/local/lib/python3.9/dist-packages (from aiohttp>=3.8.1->rembg) (1.9.2)\n",
+            "Requirement already satisfied: frozenlist>=1.1.1 in /usr/local/lib/python3.9/dist-packages (from aiohttp>=3.8.1->rembg) (1.3.3)\n",
+            "Requirement already satisfied: charset-normalizer<4.0,>=2.0 in /usr/local/lib/python3.9/dist-packages (from aiohttp>=3.8.1->rembg) (2.0.12)\n",
+            "Requirement already satisfied: multidict<7.0,>=4.5 in /usr/local/lib/python3.9/dist-packages (from aiohttp>=3.8.1->rembg) (6.0.4)\n",
+            "Requirement already satisfied: anyio<4.0.0,>=3.4.0 in /usr/local/lib/python3.9/dist-packages (from asyncer>=0.0.2->rembg) (3.6.2)\n",
+            "Requirement already satisfied: starlette<0.27.0,>=0.26.1 in /usr/local/lib/python3.9/dist-packages (from fastapi>=0.92.0->rembg) (0.26.1)\n",
+            "Requirement already satisfied: pydantic!=1.7,!=1.7.1,!=1.7.2,!=1.7.3,!=1.8,!=1.8.1,<2.0.0,>=1.6.2 in /usr/local/lib/python3.9/dist-packages (from fastapi>=0.92.0->rembg) (1.10.7)\n",
+            "Requirement already satisfied: PyWavelets in /usr/local/lib/python3.9/dist-packages (from imagehash>=4.3.1->rembg) (1.4.1)\n",
+            "Requirement already satisfied: coloredlogs in /usr/local/lib/python3.9/dist-packages (from onnxruntime>=1.14.1->rembg) (15.0.1)\n",
+            "Requirement already satisfied: packaging in /usr/local/lib/python3.9/dist-packages (from onnxruntime>=1.14.1->rembg) (23.1)\n",
+            "Requirement already satisfied: flatbuffers in /usr/local/lib/python3.9/dist-packages (from onnxruntime>=1.14.1->rembg) (23.3.3)\n",
+            "Requirement already satisfied: protobuf in /usr/local/lib/python3.9/dist-packages (from onnxruntime>=1.14.1->rembg) (3.20.3)\n",
+            "Requirement already satisfied: sympy in /usr/local/lib/python3.9/dist-packages (from onnxruntime>=1.14.1->rembg) (1.11.1)\n",
+            "Requirement already satisfied: requests>=2.19.0 in /usr/local/lib/python3.9/dist-packages (from pooch>=1.6.0->rembg) (2.27.1)\n",
+            "Requirement already satisfied: appdirs>=1.3.0 in /usr/local/lib/python3.9/dist-packages (from pooch>=1.6.0->rembg) (1.4.4)\n",
+            "Requirement already satisfied: numba!=0.49.0 in /usr/local/lib/python3.9/dist-packages (from pymatting>=1.1.8->rembg) (0.56.4)\n",
+            "Requirement already satisfied: imageio>=2.4.1 in /usr/local/lib/python3.9/dist-packages (from scikit-image>=0.19.3->rembg) (2.25.1)\n",
+            "Requirement already satisfied: networkx>=2.2 in /usr/local/lib/python3.9/dist-packages (from scikit-image>=0.19.3->rembg) (3.1)\n",
+            "Requirement already satisfied: tifffile>=2019.7.26 in /usr/local/lib/python3.9/dist-packages (from scikit-image>=0.19.3->rembg) (2023.4.12)\n",
+            "Requirement already satisfied: h11>=0.8 in /usr/local/lib/python3.9/dist-packages (from uvicorn>=0.20.0->rembg) (0.14.0)\n",
+            "Requirement already satisfied: idna>=2.8 in /usr/local/lib/python3.9/dist-packages (from anyio<4.0.0,>=3.4.0->asyncer>=0.0.2->rembg) (3.4)\n",
+            "Requirement already satisfied: sniffio>=1.1 in /usr/local/lib/python3.9/dist-packages (from anyio<4.0.0,>=3.4.0->asyncer>=0.0.2->rembg) (1.3.0)\n",
+            "Requirement already satisfied: setuptools in /usr/local/lib/python3.9/dist-packages (from numba!=0.49.0->pymatting>=1.1.8->rembg) (67.7.2)\n",
+            "Requirement already satisfied: llvmlite<0.40,>=0.39.0dev0 in /usr/local/lib/python3.9/dist-packages (from numba!=0.49.0->pymatting>=1.1.8->rembg) (0.39.1)\n",
+            "Requirement already satisfied: typing-extensions>=4.2.0 in /usr/local/lib/python3.9/dist-packages (from pydantic!=1.7,!=1.7.1,!=1.7.2,!=1.7.3,!=1.8,!=1.8.1,<2.0.0,>=1.6.2->fastapi>=0.92.0->rembg) (4.5.0)\n",
+            "Requirement already satisfied: urllib3<1.27,>=1.21.1 in /usr/local/lib/python3.9/dist-packages (from requests>=2.19.0->pooch>=1.6.0->rembg) (1.26.15)\n",
+            "Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.9/dist-packages (from requests>=2.19.0->pooch>=1.6.0->rembg) (2022.12.7)\n",
+            "Requirement already satisfied: humanfriendly>=9.1 in /usr/local/lib/python3.9/dist-packages (from coloredlogs->onnxruntime>=1.14.1->rembg) (10.0)\n",
+            "Requirement already satisfied: mpmath>=0.19 in /usr/local/lib/python3.9/dist-packages (from sympy->onnxruntime>=1.14.1->rembg) (1.3.0)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import streamlit as st\n",
+        "from PIL import Image\n",
+        "from rembg import remove\n",
+        "from io import BytesIO"
+      ],
+      "metadata": {
+        "id": "BiLtswJxGh1r"
+      },
+      "execution_count": 3,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "st.title(\"Détourage d'image\")\n",
+        "\n",
+        "image_upload = st.file_uploader(\"Choisissez une image\", type = ['png', 'jpg', 'jpeg'])\n",
+        "\n",
+        "def convert_image(image):\n",
+        "  buf = BytesIO()\n",
+        "  image.save(buf, format='PNG')\n",
+        "  byte_im = buf.getvalue()\n",
+        "  return byte_im\n",
+        "\n",
+        "if image_upload:\n",
+        "  image = Image.open(image_upload)\n",
+        "  fixed = remove(image)\n",
+        "  downloadable_image = convert_image(fixed)\n",
+        "  st.download_button(\"Télécharger l'image\", downloadable_image, \"image_detouree.png\")\n"
+      ],
+      "metadata": {
+        "id": "D-D7tcyCDQff"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "x3uH2q4GIbLm"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "hvUK72r0Jccr"
+      },
+      "execution_count": 4,
+      "outputs": []
+    }
+  ]
+}
