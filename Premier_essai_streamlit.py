@@ -15,7 +15,18 @@ genres = st.multiselect("Genres: ",
                           'Action', 
                           'Fantasy',
                           'Comedy',
-                          'Romance', 'Thriller', 'Crime', 'Adventure', 'Horror', 'Mystery', 'Biography', 'Family', 'History', 'Animation','Sci-Fi', 'Documentary'])
+                          'Romance',
+                          'Thriller',
+                          'Crime',
+                          'Adventure',
+                          'Horror',
+                          'Mystery',
+                          'Biography',
+                          'Family',
+                          'History',
+                          'Animation',
+                          'Sci-Fi',
+                          'Documentary'])
 
 
 
