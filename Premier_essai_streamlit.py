@@ -1,3 +1,8 @@
+import streamlit as st
+from PIL import Image
+from rembg import remove
+from io import BytesIO
+
 st.title("Détourage d'image")
 
 image_upload = st.file_uploader("Choisissez une image", type = ['png', 'jpg', 'jpeg'])
