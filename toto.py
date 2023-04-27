@@ -1,57 +1,29 @@
 import streamlit as st
+import pandas as pd
+
+# load the movie dataset
+df = pd.read_csv("movie_.csv")
 
 st.title('Outil de recommandation de films')
 
-  
- # Text Input
- 
-# save the input text in the variable 'name'
-# first argument shows the title of the text input box
-# second argument displays a default text inside the text input area
+# Text Input
 name = st.text_input("Enter a name", "Type Here ...")
- 
-# display the name when the submit button is clicked
-# .title() is used to get the input text string
-if(st.button('Submit')):
-    result = name.title()
-    st.success(result) 
 
-# multi select box
- 
-# first argument takes the box title
-# second argument takes the options to show
-genres = st.multiselect("Genres: ",
-                         ['Drama',
-                          'Action', 
-                          'Fantasy',
-                          'Comedy',
-                          'Romance',
-                          'Thriller',
-                          'Crime',
-                          'Adventure',
-                          'Horror',
-                          'Mystery',
-                          'Biography',
-                          'Family',
-                          'History',
-                          'Animation',
-                          'Sci-Fi',
-                          'Documentary'])
+# Multi-select box
+genres = st.multiselect("Genres: ", df['genres'].unique())
 
-
-
-# write the selected options
-st.write("You selected", len(genres), 'genres')
-
-
-# slider
- 
-# first argument takes the title of the slider
-# second argument takes the starting of the slider
-# last argument takes the end number
+# Slider
 level = st.slider("Sélectionnez une note minimale de film", 1, 10)
- 
-# print the level
-# format() is used to print value
-# of a variable at a specific position
-st.text('Selected: {}'.format(level))
+
+# Filter the dataset based on user input
+filtered_df = df[(df['actors'].str.contains(name)) & 
+                 (df['genres'].isin(genres)) &
+                 (df['averageRating'] >= level)]
+
+# Randomly select 3 movies from the filtered dataset
+selected_movies = filtered_df.sample(3)
+
+# Display the selected movies
+st.write("Selected Movies:")
+for index, row in selected_movies.iterrows():
+    st.write(row['primaryTitle'], '(', row['startYear'], ')')
