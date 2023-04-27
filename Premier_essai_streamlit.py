@@ -1,5 +1,8 @@
 import streamlit as st
 
+
+st.title('toto')
+
 # radio button
 # first argument is the title of the radio button
 # second argument is the options for the ratio button
