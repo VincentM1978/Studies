@@ -11,25 +11,13 @@ st.title('Outil de recommandation de films')
 # first argument takes the box title
 # second argument takes the options to show
 genres = st.multiselect("Genres: ",
-                         ['Drama', 'Action', 'Fantasy', 'Comedy', 'Romance', 'Thriller', 'Crime', 'Adventure', 'Horror', 'Mystery', 'Biography', 'Family', 'History', 'Animation'])
+                         ['Drama',
+                          'Action', 
+                          'Fantasy',
+                          'Comedy',
+                          'Romance', 'Thriller', 'Crime', 'Adventure', 'Horror', 'Mystery', 'Biography', 'Family', 'History', 'Animation','Sci-Fi', 'Documentary'])
 
-Drama          8289
-Comedy         3920
-Action         2155
-Romance        1962
-Thriller       1836
-Crime          1765
-Adventure      1456
-Horror          940
-Mystery         863
-Biography       693
-Fantasy         659
-Family          647
-History         558
-Animation       430
-Sci-Fi          429
-Documentary     333
-Adult             1
+
 
 # write the selected options
 st.write("You selected", len(genres), 'genres')
