@@ -1,148 +1,348 @@
+import SwiftUI
+import Combine
 
-#import functions from folders
-from config import config as c
-from utils import helpers as h
-from utils import content_based_rec
+struct Movie: Identifiable, Codable {
+    let id: Int
+    let title: String
+    let poster_path: String
+    let overview: String
+    
+    var posterURL: URL {
+        return URL(string: "https://image.tmdb.org/t/p/w500\(poster_path)")!
+    }
+}
 
-# import libraries
-import streamlit as st
-import pandas as pd 
-import numpy as np 
-import time
-from ast import literal_eval
-# import sqlite3
+struct MovieResponse: Codable {
+    let results: [Movie]
+}
+
+class MovieAPI: ObservableObject {
+    @Published var movies: [Movie] = []
+    private var cancellable: AnyCancellable?
+    private let userDefaults = UserDefaults.standard
+    private var initialLoad = true
+    
+    init() {
+        loadMoviesFromUserDefaults()
+    }
+    
+    func initialFetch() {
+        guard initialLoad else { return }
+        initialLoad = false
+        fetchMovies()
+    }
+    
+    // get it here https://www.themoviedb.org/settings/api
+    let apiKey = ""
+    
+    func fetchMovies() {
+        guard movies.isEmpty else { return }
+        let today = Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayString = formatter.string(from: today)
+        
+        let randomPage = Int.random(in: 1...10)
+        let url = URL(string: "https://api.themoviedb.org/3/discover/movie?api_key=\(apiKey)&language=en-US&sort_by=popularity.desc&include_adult=false&include_video=false&page=\(randomPage)&primary_release_date.lte=\(todayString)&vote_count.gte=1000")!
+        
+        cancellable = URLSession.shared.dataTaskPublisher(for: url)
+            .map(\.data)
+            .decode(type: MovieResponse.self, decoder: JSONDecoder())
+            .replaceError(with: MovieResponse(results: []))
+            .receive(on: DispatchQueue.main)
+            .map { movies in
+                let shuffledMovies = movies.results.shuffled()
+                return Array(shuffledMovies.prefix(5))
+            }
+            .sink(receiveCompletion: { _ in }, receiveValue: { movies in
+                self.movies = movies
+                self.saveMoviesToUserDefaults()
+            })
+        
+    }
+    
+    func fetchTrailerURL(for movie: Movie, completion: @escaping (String?) -> Void) {
+        
+        let urlString = "https://api.themoviedb.org/3/movie/\(movie.id)/videos?api_key=\(apiKey)&language=en-US"
+        
+        guard let url = URL(string: urlString) else {
+            completion(nil)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            if let data = data,
+               let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let results = jsonObject["results"] as? [[String: Any]],
+               let firstVideo = results.first,
+               let key = firstVideo["key"] as? String {
+                completion("https://www.youtube.com/watch?v=\(key)")
+            } else {
+                completion(nil)
+            }
+        }.resume()
+    }
+    
+    func fetchWatchProviders(for movie: Movie, completion: @escaping ([WatchProvider]?) -> Void) {
+        let urlString = "https://api.themoviedb.org/3/movie/\(movie.id)/watch/providers?api_key=\(apiKey)"
+        print("WP:", urlString)
+        guard let url = URL(string: urlString) else {
+            completion(nil)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            if let data = data {
+                let decoder = JSONDecoder()
+                do {
+                    let watchProvidersResponse = try decoder.decode(WatchProvidersResponse.self, from: data)
+                    completion(watchProvidersResponse.results.US?.flatrate)
+                } catch {
+                    print("Error decoding watch providers: \(error)")
+                    completion(nil)
+                }
+            } else {
+                completion(nil)
+            }
+        }.resume()
+    }
+    
+    private func saveMoviesToUserDefaults() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayString = formatter.string(from: Date())
+        
+        if let encodedMovies = try? JSONEncoder().encode(movies) {
+            userDefaults.set(encodedMovies, forKey: "movies")
+            userDefaults.set(todayString, forKey: "fetchDate")
+            print("Movies saved to UserDefaults with date: \(todayString)", movies.map { $0.title }.joined())
+        }
+    }
+    
+    private func loadMoviesFromUserDefaults() {
+        if let savedMovies = userDefaults.data(forKey: "movies"),
+           let savedMoviesDate = userDefaults.string(forKey: "fetchDate") {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            let todayString = formatter.string(from: Date())
+            
+            print("Saved movies date: \(savedMoviesDate), Today's date: \(todayString)")
+            
+            if savedMoviesDate == todayString {
+                if let decodedMovies = try? JSONDecoder().decode([Movie].self, from: savedMovies) {
+                    movies = decodedMovies
+                    print("Movies loaded from UserDefaults", movies.map { $0.title }.joined())
+                }
+            } else {
+                print("Fetching new movies")
+                fetchMovies()
+            }
+        } else {
+            print("No saved movies found, fetching new movies")
+            fetchMovies()
+        }
+    }
+    
+}
+
+struct MovieCard: View {
+    let movie: Movie
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                AsyncImage(url: movie.posterURL) { image in
+                    image.resizable()
+                } placeholder: {
+                    ProgressView()
+                }
+                .aspectRatio(contentMode: .fill)
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .clipped()
+            }
+        }
+        .edgesIgnoringSafeArea(.all)
+    }
+}
+
+struct ContentView: View {
+    @StateObject private var movieAPI = MovieAPI()
+    @State private var currentPage = 0
+    
+    @State private var selectedMovie: Movie?
+    
+    var body: some View {
+        ZStack {
+            Color.black
+                .edgesIgnoringSafeArea(.all)
+            
+            TabView(selection: $currentPage) {
+                ForEach(movieAPI.movies) { movie in
+                    MovieCard(movie: movie)
+                        .onTapGesture {
+                            print("Setting selected", movie.title)
+                            selectedMovie = movie
+                        }
+                }
+            }
+            .sheet(item: $selectedMovie) { movie in
+                MovieDetailsView(movie: movie)
+                
+            }
+            
+            .tabViewStyle(PageTabViewStyle())
+            .onAppear {
+                movieAPI.initialFetch()
+            }
+            
+            VStack {
+                Spacer()
+                Text("\(currentPage + 1)/\(movieAPI.movies.count)")
+                
+                    .padding(.bottom, 10)
+            }
+            .foregroundColor(.white)
+        }.background(.black)
+    }
+}
+
+@main
+struct MyApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
 
 
-# PAGE TITLE
-st.set_page_config(page_title="Movie Recommender", layout='wide')
-st.title('Movies Recomender with Streamlit')
+struct MovieDetailsView: View {
+    let movie: Movie
+    @State private var trailerURL: URL?
+    @StateObject private var movieAPI = MovieAPI()
+    @State private var watchProviders: [WatchProvider] = []
+    
+    var body: some View {
+        ScrollView {
+            
+            VStack(alignment: .leading, spacing: 10) {
+                
+                if let url = trailerURL {
+                    WebView(request: URLRequest(url: url))
+                        .frame(height: UIScreen.main.bounds.width * 9 / 16)
+                        .transition(.opacity.animation(.easeIn(duration: 0.4).delay(1)))
+                } else {
+                    ProgressView()
+                        .frame(height: UIScreen.main.bounds.width * 9 / 16)
+                }
+                
+                Text(movie.title)
+                    .font(.largeTitle)
+                    .foregroundColor(.white)
+                    .fontWeight(.bold)
+                    .foregroundColor(.black)
+                
+                Text(movie.overview)
+                    .font(.body)
+                    .foregroundColor(.white)
+                    .lineLimit(nil)
+                    .truncationMode(.tail)
+                
+                
+                if !watchProviders.isEmpty {
+                    Text("Available On")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.top)
+                    
+                    HStack {
+                        ForEach(watchProviders) { provider in
+                            
+                            AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/original\(provider.logoPath)")) { image in
+                                image.resizable()
+                            } placeholder: {
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(Color.gray)
+                                    .frame(width: 50, height: 50)
+                            }
+                            .frame(width: 50, height: 50)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                            
+                            
+                        }
+                    }
+                }
+                
+                
+                Spacer()
+            }
+            .padding(20)
+            .onAppear {
+                movieAPI.fetchTrailerURL(for: movie) { urlString in
+                    if let urlString = urlString {
+                        DispatchQueue.main.async {
+                            trailerURL = URL(string: urlString)
+                        }
+                    }
+                }
+                
+                
+                movieAPI.fetchWatchProviders(for: movie) { providers in
+                    if let providers = providers {
+                        print("got providers", providers.map { $0.logoPath }.joined())
+                        DispatchQueue.main.async {
+                            watchProviders = providers
+                        }
+                    }
+                }
+                
+            }.background(Color.black.edgesIgnoringSafeArea(.all))
+        }.background(.black)
+    }
+}
 
 
-# GENRE SELECT
-genres = h.get_genres_for_display()
-selected_genre = st.sidebar.selectbox('Select Genre', sorted(genres), index = 0)
+import WebKit
+struct WebView: UIViewRepresentable {
+    let request: URLRequest
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.allowsBackForwardNavigationGestures = true
+        return webView
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        uiView.load(request)
+    }
+}
 
 
-# YEAR SLIDER
-oldest, newest = h.get_movie_range()
-years = st.sidebar.slider('Movies between:', int(oldest), int(newest), (int(oldest), int(newest)))
+struct WatchProvidersResponse: Codable {
+    let results: WatchProvidersResults
+}
 
+struct WatchProvidersResults: Codable {
+    let US: WatchProviders?
+    
+    enum CodingKeys: String, CodingKey {
+        case US = "US"
+    }
+}
 
-# GADGETS TO DISPLAY MOVIES
-images_per_page = st.sidebar.slider('Images per page', 5, 60, value = 30, step = 5)
-offset = st.sidebar.slider(f"<- Navigate through pages ->", 0, 10, value = 0, step = 1)
+struct WatchProviders: Codable {
+    let flatrate: [WatchProvider]?
+}
 
+struct WatchProvider: Codable, Identifiable {
+    let id = UUID()
+    let logoPath: String
+    let name: String
 
-# RECOMMENDATION METHOD
-rec_method = h.get_recommendation_method()
-if rec_method == 'Generalized recommendations':
-
-	# DISPLAY SELECTION
-	if selected_genre != 'ALL':
-		st.markdown(f"## **List of Best {selected_genre} Movies between {years[0]} - {years[1]}**")
-	else:
-		st.markdown(f"## **List of Best Movies between {years[0]} - {years[1]}**")
-
-	# GET MOVIES TO RECOMMEND
-	movies_db = h.get_movies(selected_genre, years, images_per_page, offset)
-
-	# COMPONENTS
-	scores = [f"Score: {movie['scores']}" for movie in movies_db]
-	titles = [movie['title'] for movie in movies_db]
-	ids = [movie['id'] for movie in movies_db]
-	links = [f"{c.MOVIE_DB_URL}{movie['poster_path']}" if movie['poster_path'] is not None else c.NO_IMAGE for movie in movies_db ]
-
-
-	# DISPLAY MOVIES
-	components = h.display_movies(ids, links, titles, scores)
-
-
-elif rec_method == 'Content-based recommendations':
-	name_like = st.sidebar.text_input("Recommend movies like:", 'Title starts like...')
-	searched = h.search_movie(name_like)
-
-	movies_titles = [search['title'] for search in searched]
-	movies_idx = [search['id'] for search in searched]
-	movie_links = [search['poster_path'] for search in searched]
-
-	movie_name = st.sidebar.selectbox('', movies_titles)
-	try:
-		movie_id = movies_idx[movies_titles.index(movie_name)]
-		st.sidebar.image(f"{c.MOVIE_DB_URL}{movie_links[movies_titles.index(movie_name)]}")
-		st.markdown(f"## **List of Movies similar to {movie_name} between {years[0]} - {years[1]}**")
-
-		content_based_rec.get_recommendations(movie_id, years, images_per_page, offset)
-	except Exception as e:
-		st.markdown(f"## **Search for a movie in the Sidebar**")
-		st.success("Waiting for a movie...")
-		#st.write(e)
-
-elif rec_method == 'Collaborative recomendations':
-
-	usernames = h.get_usernames()
-	user_ids =  [item['id'] for item in usernames]
-	usernames = [item['username'] for item in usernames]
-	
-	# checkbox_help = f"Unselect this checkbox if you want to go back and chose a diferent user or register a new user"
-	user_options = ['Choose/Rechoose', 'Test-users', 'New user', 'Log in']
-	radio_options = st.sidebar.empty()
-	user_option = radio_options.radio('Logged_in', user_options,  0)
-
-	try:
-		# GET MOVIES TO RECOMMEND
-		h.testing_collaborative(selected_genre, years, images_per_page, offset, user_id)
-		
-	except:
-		if user_option == user_options[0]:
-			title_description = f"## **Are you a new user?**"
-			st.markdown(title_description)
-
-			info_description = (f"## **OPTIONS:** \n " + 
-				f" 1) Choose a 'test-user' from the sidebar to see their preferred movies and recommendations \n\n" +  
-				f" 2) Create a new-user or log in to input your preferences and get personalized recommendations")
-			st.info(info_description)
-
-		elif user_option == user_options[1]:
-			user_name = st.sidebar.selectbox('Select a test-user', usernames)
-			
-			# test_user_button = st.sidebar.button('Choose test user')
-			# if test_user_button:
-			user_id = user_ids[usernames.index(user_name)]
-			st.success(f"You have selected {user_name}. Now you can view his list of liked movies and his recommendations")
-			time.sleep(2)
-			h.testing_collaborative(selected_genre, years, images_per_page, offset, user_id, 'test')
-		else:
-			new_username = st.sidebar.text_input("Introduce your username:", 'username')
-			new_password = st.sidebar.text_input("Introduce your password:", 'password')
-			if user_option == user_options[2]:
-				
-				new_user_button = st.sidebar.button('Create new user')
-				if new_user_button:
-					try:
-						user_id = h.add_new_user(new_username, new_password)	
-						user_name = new_username
-						if user_id:
-							st.success(f"Hello {user_name}! Your account have been successfully created")
-							time.sleep(2)
-							user_option = radio_options.radio('Logged_in', user_options, 3)
-					except:
-						st.warning('This username already exist. Try logging in or chosing a diferent username')
-
-			if user_option == user_options[3]:
-
-				user_id = h.check_data(new_username, new_password)
-				if user_id:
-					user_name = new_username
-					st.success(f"Hello {user_name}! Your are now logged in")
-					time.sleep(2)
-					h.testing_collaborative(selected_genre, years, images_per_page, offset, user_id, 'real')
-				else:
-					st.warning("This username and password combination do not exist in the data base")
-
-		
-	
-
-	
-
-
-
+    enum CodingKeys: String, CodingKey {
+        case id
+        case logoPath = "logo_path"
+        case name = "provider_name"
+    }
+}
