@@ -1,6 +1,6 @@
 import streamlit as st
 from PIL import Image
-from rembg import remove
+
 from io import BytesIO
 
 st.title("Détourage d'image")
@@ -12,8 +12,3 @@ def convert_image(image):
   image.save(buf, format='PNG')
   byte_im = buf.getvalue()
   return byte_im
-
-if image_upload:
-  image = Image.open(image_upload)
-  fixed = remove(image)
-  downloadable_image = convert_image(fixed)
