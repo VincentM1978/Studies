@@ -1,7 +1,7 @@
 import streamlit as st
 
 df_by_team = pd.read_csv(r"‪C:\Users\Vincent\DATASETSIMDB\df_fr.csv")
-    
+    df_by_team = pd.read_csv(r"df_fr.csv")
 
 st.title('Outil de recommandation de films')
 
